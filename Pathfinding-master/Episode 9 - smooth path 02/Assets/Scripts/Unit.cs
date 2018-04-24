@@ -1,12 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Unit : MonoBehaviour {
 
 	const float minPathUpdateTime = .2f;
 	const float pathUpdateMoveThreshold = .5f;
 
-	public Transform target;
+	public Target target;
 	public float speed = 20;
 	public float turnSpeed = 3;
 	public float turnDst = 5;
@@ -14,22 +15,47 @@ public class Unit : MonoBehaviour {
 
 	Path path;
 
+    Material mat;
+
 	void Start()
     {
+        var rens = GetComponentsInChildren<MeshRenderer>();
+        if (mat == null)
+        {
+            mat = new Material(rens[0].sharedMaterial);
+            mat.color = Random.ColorHSV(0, 1, 1, 1, 1, 1);
+        }
+
+        foreach (var ren in rens)
+            if (ren.sharedMaterial.name.Contains("Chassis"))
+                ren.sharedMaterial = mat;
+
+        speed = Random.Range(10f, 20f);
+
+        var targets = FindObjectsOfType<Target>();
+        target = targets[Random.Range(0, targets.Length)];
+
+        for (int i = 0; i < 20; i++)
+        {
+            var prev = target;
+
+            while (prev == target)
+                target = targets[Random.Range(0, targets.Length)];
+
+            randoTargets.Add(target);
+        }
+
         Go();
 	}
 
+    
+
+    List<Target> randoTargets = new List<Target>();
 
     void Go()
     {
-        var targets = FindObjectsOfType<Target>();
-        Target pick = target.GetComponent<Target>();
 
-        while (pick == null || pick.transform == target && targets.Length > 0) 
-            pick = targets[Random.Range(0, targets.Length)];
-
-        target = pick.transform;
-
+        target = randoTargets[Mathf.RoundToInt(Time.time) % randoTargets.Count];
         StartCoroutine(UpdatePath());
     }
 
@@ -45,20 +71,21 @@ public class Unit : MonoBehaviour {
 	IEnumerator UpdatePath()
     {
 
+        Vector3 targetPos = target.transform.position;
 
 		if (Time.timeSinceLevelLoad < .3f) {
 			yield return new WaitForSeconds (.3f);
 		}
-		PathRequestManager.RequestPath (transform.position, target.position, OnPathFound);
+		PathRequestManager.RequestPath (transform.position, targetPos, OnPathFound);
 
 		float sqrMoveThreshold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
-		Vector3 targetPosOld = target.position;
+		Vector3 targetPosOld = targetPos;
 
 		while (true) {
 			yield return new WaitForSeconds (minPathUpdateTime);
-			if ((target.position - targetPosOld).sqrMagnitude > sqrMoveThreshold) {
-				PathRequestManager.RequestPath (transform.position, target.position, OnPathFound);
-				targetPosOld = target.position;
+			if ((targetPos - targetPosOld).sqrMagnitude > sqrMoveThreshold) {
+				PathRequestManager.RequestPath (transform.position, targetPos, OnPathFound);
+				targetPosOld = targetPos;
 			}
 		}
 	}
@@ -75,7 +102,7 @@ public class Unit : MonoBehaviour {
 
 		while (path != null && path.lookPoints.Length > 0) {
 			Vector2 pos2D = new Vector2 (transform.position.x, transform.position.z);
-			while (path.turnBoundaries [pathIndex].HasCrossedLine (pos2D)) {
+			while (pathIndex < path.turnBoundaries.Length && path.turnBoundaries [pathIndex].HasCrossedLine (pos2D)) {
 				if (pathIndex == path.finishLineIndex) {
 					path = null;
 					break;
@@ -97,7 +124,7 @@ public class Unit : MonoBehaviour {
                 }
             }
 
-            if (path != null)
+            if (path != null && pathIndex < path.lookPoints.Length )
             {  
                 Quaternion targetRotation = Quaternion.LookRotation (path.lookPoints [pathIndex] - transform.position);
 				transform.rotation = Quaternion.Lerp (transform.rotation, targetRotation, Time.deltaTime * turnSpeed);

@@ -240,7 +240,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Grid.cs" />
+    <Compile Include="Assets\DIrection.cs" />
+    <Compile Include="Assets\Scripts\AStarGrid.cs" />
     <Compile Include="Assets\Scripts\Heap.cs" />
     <Compile Include="Assets\Scripts\Line.cs" />
     <Compile Include="Assets\Scripts\Node.cs" />

@@ -7,11 +7,11 @@ using System;
 public class Pathfinding : MonoBehaviour {
 	
 	PathRequestManager requestManager;
-	Grid grid;
+	AStarGrid grid;
 	
 	void Awake() {
 		requestManager = GetComponent<PathRequestManager>();
-		grid = GetComponent<Grid>();
+		grid = GetComponent<AStarGrid>();
 	}
 	
 	
@@ -30,9 +30,14 @@ public class Pathfinding : MonoBehaviour {
 		Node startNode = grid.NodeFromWorldPoint(startPos);
 		Node targetNode = grid.NodeFromWorldPoint(targetPos);
 		startNode.parent = startNode;
-		
-		
-		if (startNode.walkable && targetNode.walkable) {
+
+        int counter = 0;
+
+		if (startNode.walkable && targetNode.walkable)
+        {
+            if (counter % 500 == 0) 
+                yield return new WaitForEndOfFrame();
+
 			Heap<Node> openSet = new Heap<Node>(grid.MaxSize);
 			HashSet<Node> closedSet = new HashSet<Node>();
 			openSet.Add(startNode);
@@ -52,8 +57,14 @@ public class Pathfinding : MonoBehaviour {
 					if (!neighbour.walkable || closedSet.Contains(neighbour)) {
 						continue;
 					}
-					
-					int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour) + neighbour.movementPenalty;
+
+                    int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
+
+                    if (neighbour.direction != Vector2.zero)
+                        newMovementCostToNeighbour += neighbour.DirectionPenalty(currentNode);
+                    else //if (true)
+                        newMovementCostToNeighbour += neighbour.movementPenalty;
+
 					if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour)) {
 						neighbour.gCost = newMovementCostToNeighbour;
 						neighbour.hCost = GetDistance(neighbour, targetNode);

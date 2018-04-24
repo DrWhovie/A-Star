@@ -1,8 +1,7 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
-public class Grid : MonoBehaviour {
+public class AStarGrid : MonoBehaviour {
 
 	public bool displayGridGizmos;
 	public LayerMask unwalkableMask;
@@ -52,10 +51,13 @@ public class Grid : MonoBehaviour {
 				int movementPenalty = 0;
 
 
+                Vector2 direction = Vector2.zero;
 				Ray ray = new Ray(worldPoint + Vector3.up * 50, Vector3.down);
 				RaycastHit hit;
 				if (Physics.Raycast(ray,out hit, 100, walkableMask)) {
 					walkableRegionsDictionary.TryGetValue(hit.collider.gameObject.layer, out movementPenalty);
+                    if (hit.collider.GetComponent<DIrection>())
+                        direction = hit.transform.forward;
 				}
 
 				if (!walkable) {
@@ -63,7 +65,7 @@ public class Grid : MonoBehaviour {
 				}
 
 
-				grid[x,y] = new Node(walkable,worldPoint, x,y, movementPenalty);
+				grid[x,y] = new Node(walkable,worldPoint, x,y, movementPenalty, direction);
 			}
 		}
 
@@ -153,11 +155,17 @@ public class Grid : MonoBehaviour {
 	}
 
 	void OnDrawGizmos() {
-		Gizmos.DrawWireCube(transform.position,new Vector3(gridWorldSize.x,1,gridWorldSize.y));
 		if (grid != null && displayGridGizmos) {
+		    Gizmos.DrawWireCube(transform.position,new Vector3(gridWorldSize.x,1,gridWorldSize.y));
 			foreach (Node n in grid) {
 
-				Gizmos.color = Color.Lerp (Color.white, Color.black, Mathf.InverseLerp (penaltyMin, penaltyMax, n.movementPenalty));
+                if (n.direction != Vector2.zero)
+                    Gizmos.color = new Color(n.direction.x, n.direction.y, 1);
+                else
+                {
+                    Gizmos.color = Color.Lerp(Color.white, Color.black, Mathf.InverseLerp(penaltyMin, penaltyMax, n.movementPenalty));
+                }
+
 				Gizmos.color = (n.walkable)?Gizmos.color:Color.red;
 				Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter));
 			}
